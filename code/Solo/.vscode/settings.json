@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "cstdint": "cpp",
+        "exception": "cpp",
+        "type_traits": "cpp",
+        "typeinfo": "cpp"
+    }
+}
