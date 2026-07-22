@@ -9,10 +9,7 @@ O funcionamento geral do firmware implementado se baseia em duas fases: setup (o
 </p>
 
 Imagens da eletrônica do Weiss
-<p align="center">
-<img width="400" height="883" alt="image" src="https://github.com/user-attachments/assets/62ede18b-bd53-45a5-82f9-87401332e2ac" />
-<img width="400" height="883" alt="image" src="https://github.com/user-attachments/assets/a4dc1c1a-dc05-4d9b-9126-a09bbe39e2e7" />
-</p>
+--- A ser inserido após a manufatura ---
 
 Segue a lista de principais bibliotecas utilizadas no projeto e suas respectivas versões:
 - Adafruit BMP280 by Adafruit: 2.6.8
