@@ -1,3 +1,5 @@
+#include "KalmanFunc.h"
+
 void wrapperSetupBuzzer() {
   setupBuzzer();
 }
@@ -70,6 +72,10 @@ void getSensorsMeasures() {
     } else {
       wrapperSetupMPU();
     }
+  }
+
+  if (ENABLE_BMP && ENABLE_MPU && setupMPUFlag){
+    kalman_filter();
   }
 
   //Medições GPS
