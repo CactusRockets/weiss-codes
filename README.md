@@ -239,6 +239,17 @@ Concentra funções auxiliares para debug do estado atual do sistema.
 
 Módulo responsável pelo controle do buzzer, incluindo funções de acionamento e padrões sonoro
 
+### KalmanFunc.h
+
+Contém a função para aplicar o filtro de Kalman aos valores lidos pelo MPU6050 e pelo BMP390 e uma auxiliar para obter a diferença de tempo entre leituras. O filtro é executado na função getSensorsMeasures(), em setup.h
+
+**Funções**
+- **obtain_dt()**
+- Retorna a diferença de tempo em ms entre leituras
+
+- **kalman_filter()**
+- Aplica o filtrto de Kalman à altitude e à aceleração lidas, respectivamente, pelo BMP390 e pelo MPU6050
+
 # Explicando um pouco sobre orientação no espaço tridimensional
 
 De maneira resumida, para representar um objeto no espaço precisamos definir sua posição e angulação em relação ao sistema de referência. Um objeto no espaço é representado por um frame, um sistema tridimensional em alguma posição e inclinado (possivelmente) em relação ao sistema global:
