@@ -1,39 +1,53 @@
-/* CONFIGURAÇÕES BUZZER */
+/* CONFIGURAÇÕES BUZZER PASSIVO - VOLUME MÁXIMO / MODO RESGATE */
 
 #define BUZZER_PIN 14
-#define BEEP_TIME 300
+
+
+#define BEEP_FREQ_MAX 3500 
+#define BEEP_TIME 300      
+#define BEEP_PAUSE 150
 
 void setupBuzzer() {
   pinMode(BUZZER_PIN, OUTPUT);
-  Serial.println("Buzzer configurado!");
+  digitalWrite(BUZZER_PIN, LOW);
+  Serial.println("Buzzer (Modo Resgate) configurado!");
 }
 
 void activateBuzzer() {
-  digitalWrite(BUZZER_PIN, HIGH);
-  flash_up();
-  Serial.println("Buzzer ativado!");
+  tone(BUZZER_PIN, BEEP_FREQ_MAX);
+  Serial.println("Buzzer ativado (Volume Max)");
 }
 
 void desactivateBuzzer() {
+  noTone(BUZZER_PIN);
   digitalWrite(BUZZER_PIN, LOW);
-  flash_down();
-  Serial.println("Buzzer desativado!");
+  Serial.println("Buzzer desativado");
 }
 
+// --- 1. Sinal Sonoro de Inicialização (3 Bips Estridentes) ---
 void tripleBuzzerBip() {
-  activateBuzzer();
-  delay(BEEP_TIME);
-  desactivateBuzzer();
-  delay(BEEP_TIME);
-
-  activateBuzzer();
-  delay(BEEP_TIME);
-  desactivateBuzzer();
-  delay(BEEP_TIME);
+  Serial.println("--> AVISO: Sistema Ligado! Emitindo 3 bips no volume máximo...");
   
-  activateBuzzer();
-  delay(BEEP_TIME);
-  desactivateBuzzer();
-  delay(BEEP_TIME);
+  for(int i = 0; i < 3; i++) {
+    tone(BUZZER_PIN, BEEP_FREQ_MAX);
+    delay(BEEP_TIME);
+    noTone(BUZZER_PIN);
+    digitalWrite(BUZZER_PIN, LOW);
+    delay(BEEP_PAUSE);
+  }
 }
 
+// --- 2. Sinal de Busca/Resgate (Sirene de Localização) ---
+// Chame essa função no loop() caso a aviônica detecte o pouso ou perda de sinal!
+void beaconLostMode() {
+  for(int freq = 2500; freq <= 4000; freq += 100) {
+    tone(BUZZER_PIN, freq);
+    delay(10);
+  }
+  for(int freq = 4000; freq >= 2500; freq -= 100) {
+    tone(BUZZER_PIN, freq);
+    delay(10);
+  }
+  noTone(BUZZER_PIN);
+  digitalWrite(BUZZER_PIN, LOW);
+}

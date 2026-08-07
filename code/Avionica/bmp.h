@@ -1,10 +1,11 @@
-#define BMP_ADDRESS 0x77
+#include <Wire.h>
+
+#define BMP_ADDRESS 0x76
 #define SEA_LOCAL_PRESSURE 1013.2
 
-#define BMP_SCK  (13)
-#define BMP_MISO (12)
-#define BMP_MOSI (11)
-#define BMP_CS   (10)
+// Pinos corretos do I2C no seu ESP32
+#define I2C_SDA 21
+#define I2C_SCL 22
 
 Adafruit_BMP3XX bmp;
 
@@ -30,6 +31,8 @@ void getInitialAltitude() {
 }
 
 void verifyBMP() {
+  // Força o ESP32 a usar as trilhas corretas da sua PCB antes de ligar o sensor
+  Wire.begin(I2C_SDA, I2C_SCL); 
   setupBMPFlag = bmp.begin_I2C(BMP_ADDRESS);
 }
 
@@ -59,4 +62,3 @@ void readBMP() {
     highestAltitude = altitudeAtual;
   }
 }
-
