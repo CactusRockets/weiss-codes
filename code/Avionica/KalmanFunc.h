@@ -8,8 +8,8 @@ using namespace BLA;
 KALMAN<Nstate, Nobs> K;
 BLA::Matrix<Nobs> obs;
 
-#define sigma_baro 50
-#define sigma_accel 3
+#define sigma_baro 0.022088
+#define sigma_accel 0.000225 * 50
 
 extern PacketData allData;
 

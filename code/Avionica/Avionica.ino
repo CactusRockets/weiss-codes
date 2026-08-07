@@ -1,4 +1,4 @@
-// Projeto Joliot - Avionica 1Km
+// Projeto Weiss - Avionica 1Km
 
 #include "esp_system.h"
 
@@ -13,8 +13,8 @@
 #define ENABLE_BMP true
 #define ENABLE_MPU true
 #define ENABLE_SKIBS true
-#define ENABLE_SD true
-#define ENABLE_TELEMETRY true
+#define ENABLE_SD false
+#define ENABLE_TELEMETRY false
 #define ENABLE_GPS true
 
 #define LED_ACTIVE 2
@@ -224,14 +224,15 @@ void loop()
 
   debugPacketData();
   getSensorsMeasures();
-  // Serial.println("IsDropping: " + String(isDropping));
+  Serial.println("IsDropping: " + String(isDropping));
 
   allData.data.time = millis() / 1000.0;
 
   checkApogee();
   saveMessages();
 
-  println(telemetry_message);
+
+  //println(telemetry_message);
   // debugTelemetryMessage(telemetry_message);
 
   if (ENABLE_SD)

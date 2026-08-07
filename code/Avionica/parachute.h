@@ -1,5 +1,5 @@
 #define SKIB1 13  
-#define SAFE_MARGIN_ALTITUDE_ERROR 20 
+#define SAFE_MARGIN_ALTITUDE_ERROR 20
  
 // Em millisegundos 
 #define SKIB_TIME 3000 
@@ -61,7 +61,7 @@ void checkApogee() {
   } 
 } 
  
-void testActivations(int millisStage1, int millisStage2) { 
+void testActivations(int millisStage1) { 
   Serial.println(millis()); 
   if(millis() > millisStage1 && parachute1Activated == false) { 
     activateStage1(); 
