@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include "debug.h"
 #include "model.h"
-#include "server.h"
+#include "app_server.h"
 #include "telemetry.h"
 
 #define BUTTON_PIN 4

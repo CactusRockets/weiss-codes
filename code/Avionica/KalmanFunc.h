@@ -40,7 +40,7 @@ void kalman_filter(){
               0.0, sigma_accel*sigma_accel};
 
        obs(0) = allData.bmpData.altitude;
-       obs(1) = allData.imuData.accelZ;
+       obs(1) = allData.imuData.accelY;
 
        K.update(obs);
 
