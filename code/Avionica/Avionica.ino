@@ -14,7 +14,7 @@
 #define ENABLE_MPU true
 #define ENABLE_SKIBS true
 #define ENABLE_SD false
-#define ENABLE_TELEMETRY false
+#define ENABLE_TELEMETRY true
 #define ENABLE_GPS true
 
 #define LED_ACTIVE 2
