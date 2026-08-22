@@ -1,6 +1,6 @@
 #include <Wire.h>
 
-#define BMP_ADDRESS 0x77
+#define BMP_ADDRESS 0x76
 #define SEA_LOCAL_PRESSURE 1013.2
 
 // Pinos corretos do I2C no seu ESP32

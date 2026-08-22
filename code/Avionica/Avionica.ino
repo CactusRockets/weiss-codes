@@ -13,7 +13,7 @@
 #define ENABLE_BMP true
 #define ENABLE_MPU true
 #define ENABLE_SKIBS true
-#define ENABLE_SD false
+#define ENABLE_SD true
 #define ENABLE_TELEMETRY true
 #define ENABLE_GPS true
 
@@ -193,10 +193,11 @@ void setup()
   Serial.println("------ Inicializando Sistema --------");
   Serial.println("-------------------------------------");
 
+  tripleBuzzerBip();
   setupComponents();
   getInitialAltitude();
   resetStructs();
-  tripleBuzzerBip();
+  
 
   pinMode(LED_ACTIVE, OUTPUT);
 
