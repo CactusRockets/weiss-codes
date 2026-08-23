@@ -32,7 +32,7 @@ void activateStage1() {
 void deactivateStage1() { 
   digitalWrite(SKIB1, LOW); 
   Serial.println("Skib desativado!"); 
-  desactivateBuzzer(); 
+ 
 } 
  
 bool altitudeLessThan(double altitude1, double altitude2) { 
