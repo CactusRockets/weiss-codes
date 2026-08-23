@@ -3,11 +3,11 @@
 #include <HardwareSerial.h>
 
 // Pinos da Serial 2 do ESP32
-#define RX2_PIN 16
-#define TX2_PIN 17
+#define RX2_PIN 1
+#define TX2_PIN 3
 #define M0 21
-#define M1 22
-#define LED 4
+#define M1 19
+#define LED 13
 
 // Usando a Serial 2 do ESP32
 HardwareSerial LoRaSerial(2);
