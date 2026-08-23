@@ -19,6 +19,11 @@
 
 #define LED_ACTIVE 2
 
+// Periodo alvo do loop principal, em milissegundos
+#define LOOP_PERIOD_MS 200
+// Intervalo do debug serial, em milissegundos
+#define DEBUG_INTERVAL_MS 1000
+
 struct AvionicData
 {
   float time;
@@ -74,7 +79,7 @@ void debugPacketData()
   Serial.print(" - Time: ");
   Serial.println(allData.data.time);
   Serial.print(" - Parachute: ");
-  Serial.println(allData.data.parachute);
+  Serial.println(allData.parachute);
 
   Serial.println("[BmpData]");
   Serial.print(" - Temperature: ");
@@ -155,8 +160,13 @@ void saveMessages();
 
 // Variáveis para controle de tempo
 unsigned long lastTelemetryTime = 0;
+unsigned long lastDebugTime = 0;
+
+// Diagnostico de timing do loop
+unsigned long worstLoopTime = 0;
 
 const unsigned long telemetryInterval = 3000; // intervalo de 3 segundos
+
 void enterLORAConfigMode()
 {
   digitalWrite(M0, HIGH);
@@ -176,7 +186,8 @@ void flash_up()
   digitalWrite(LED_ACTIVE, HIGH);
 }
 
-void flash_down() {
+void flash_down()
+{
   digitalWrite(LED_ACTIVE, LOW);
 }
 
@@ -197,7 +208,6 @@ void setup()
   setupComponents();
   getInitialAltitude();
   resetStructs();
-  
 
   pinMode(LED_ACTIVE, OUTPUT);
 
@@ -221,30 +231,29 @@ void setup()
 
 void loop()
 {
-  int executionTime = millis() / 1000;
+  unsigned long loopStart = millis();
 
-  debugPacketData();
+  // ===== PRIORIDADE: leitura dos sensores e decisao de apogeu =====
   getSensorsMeasures();
-  Serial.println("IsDropping: " + String(isDropping));
 
   allData.data.time = millis() / 1000.0;
 
   checkApogee();
+  // ================================================================
+
   saveMessages();
-
-
-  //println(telemetry_message);
-  // debugTelemetryMessage(telemetry_message);
 
   if (ENABLE_SD)
   {
-    verifySD();
     if (setupSDFlag)
     {
       writeOnSD(sd_message);
     }
     else
     {
+      // Só tenta reinicializar quando o SD já falhou.
+      // Rodar verifySD() todo loop pode travar centenas de ms.
+      verifySD();
       wrapperSetupSD();
     }
   }
@@ -263,5 +272,40 @@ void loop()
       }
     }
   }
-  delay(500);
+
+  // Debug serial limitado a 1 Hz para nao bloquear o loop
+  if (ENABLE_SERIAL && (millis() - lastDebugTime >= DEBUG_INTERVAL_MS))
+  {
+    lastDebugTime = millis();
+
+    debugPacketData();
+    Serial.println("IsDropping: " + String(isDropping));
+    Serial.println("Altitude atual: " + String(altitudeAtual) +
+                   " | Maxima: " + String(highestAltitude));
+    Serial.println("Pior loop (ms): " + String(worstLoopTime));
+  }
+
+  // Delay compensado: mantem o periodo do loop constante
+  unsigned long elapsed = millis() - loopStart;
+
+  if (elapsed > worstLoopTime)
+  {
+    worstLoopTime = elapsed;
+  }
+
+  // Reporta na hora qualquer loop lento, com timestamp.
+  // Serve para distinguir um evento unico de boot de algo recorrente.
+  if (elapsed > 300)
+  {
+    Serial.print("!!! LOOP LENTO: ");
+    Serial.print(elapsed);
+    Serial.print(" ms | em t = ");
+    Serial.print(millis() / 1000.0);
+    Serial.println(" s");
+  }
+
+  if (elapsed < LOOP_PERIOD_MS)
+  {
+    delay(LOOP_PERIOD_MS - elapsed);
+  }
 }
