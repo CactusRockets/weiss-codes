@@ -23,7 +23,12 @@ void setup()
 
   setupServer();
   server.begin();
+  Serial.println("Servidor HTTP iniciado");
+  Serial.flush();
+
   setupTelemetry();
+  Serial.println("Setup completo...");
+  Serial.flush();
 }
 
 void loop()

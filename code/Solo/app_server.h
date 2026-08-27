@@ -4,8 +4,8 @@
 #include <AsyncTCP.h>
 #include <ArduinoJson.h>
 
-const char *ssid = "SHP";
-const char *password = "c4c7us@2024";
+const char *ssid = "Daniel";
+const char *password = "senhadowifi";
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -45,13 +45,21 @@ void setupServer()
   Serial.println("Conectado ao WiFi");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+  Serial.flush();
 
+  Serial.println("Iniciando mDNS...");
+  Serial.flush();
   if (!MDNS.begin("esp32"))
   {
-    Serial.println("Erro ao configurar mDNS");
-    return;
+    // Falha no mDNS nao impede o servidor de funcionar pelo IP,
+    // por isso nao abortamos mais o setup aqui.
+    Serial.println("Erro ao configurar mDNS (seguindo mesmo assim)");
   }
-  Serial.println("mDNS configurado como esp32.local");
+  else
+  {
+    Serial.println("mDNS configurado como esp32.local");
+  }
+  Serial.flush();
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
