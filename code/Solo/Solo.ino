@@ -36,7 +36,8 @@ void loop()
   // telemetry_message.clear();
 
    if(!LoRaSerial.available()){
-    // Serial.println("Lora não está disponível");
+    Serial.println("Lora não está disponível");
+    receiveString();
    }
    delay(500);
 
@@ -45,7 +46,6 @@ void loop()
 
     Serial.println("LoRa available!");
 
-    receiveString();
 
     // PADRÃO DE MENSAGEM TRANSMITIDA - CUIDADO AO MUDAR ISSO
     // Numero do pacote -> primeiros 5 dígitos sem sinal
