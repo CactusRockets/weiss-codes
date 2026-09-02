@@ -1,7 +1,8 @@
 int extractNumber(String numberText, int width, bool considerSignal = false)
 {
     int slicePosition = 1;
-    while (numberText[slicePosition] == '0' && slicePosition < width)
+    while (slicePosition < width && slicePosition < static_cast<int>(numberText.length()) &&
+           numberText[slicePosition] == '0')
     {
         slicePosition++;
     }
@@ -23,6 +24,7 @@ int extractNumber(String numberText, int width, bool considerSignal = false)
             return -1 * realNumber;
         }
     }
+    return 0; // Sinal ausente/invalido: garante retorno definido no diagnostico.
 }
 
 void debugTelemetryMessage(String message)
@@ -35,8 +37,8 @@ void debugTelemetryMessage(String message)
     float quaternionY = 0.01 * extractNumber(message.substring(25, 29), 4, true);
     float quaternionZ = 0.01 * extractNumber(message.substring(29, 33), 4, true);
     int parachute = message.substring(33, 34).toInt();
-    bool skib1 = (parachute > 0) || skib1;
-    bool skib2 = (parachute > 1) || skib2;
+    bool skib1 = (parachute > 0);
+    bool skib2 = (parachute > 1);
     float latitude = 0.001 * extractNumber(message.substring(34, 41), 6, true);
     float longitude = 0.001 * extractNumber(message.substring(41, 47), 6, true);
     float velocity = 1;

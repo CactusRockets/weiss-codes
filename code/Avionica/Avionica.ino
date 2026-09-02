@@ -167,20 +167,6 @@ unsigned long worstLoopTime = 0;
 
 const unsigned long telemetryInterval = 3000; // intervalo de 3 segundos
 
-void enterLORAConfigMode()
-{
-  digitalWrite(M0, HIGH);
-  digitalWrite(M1, HIGH);
-  delay(50); // aguarda estabilizar
-}
-
-void exitLORAConfigMode()
-{
-  digitalWrite(M0, LOW);
-  digitalWrite(M1, LOW);
-  delay(50);
-}
-
 void flash_up()
 {
   digitalWrite(LED_ACTIVE, HIGH);
@@ -200,6 +186,7 @@ void setup()
   telemetry_message.reserve(1500);
 
   Serial.begin(115200);
+  Serial.println("[FW] AVIONICA-E32-DIAG-1");
   Serial.println("-------------------------------------");
   Serial.println("------ Inicializando Sistema --------");
   Serial.println("-------------------------------------");
@@ -211,18 +198,12 @@ void setup()
 
   pinMode(LED_ACTIVE, OUTPUT);
 
-  enterLORAConfigMode();
-  Serial.println("Setando a potência de transmissão do LORA para 21dbm");
-  LoRaSerial.print("AT+POWER=3\r\n"); // exemplo: seta para 21 dBm
-  unsigned long t0 = millis();
-  while (millis() - t0 < 500)
+  if (ENABLE_TELEMETRY)
   {
-    if (LoRaSerial.available())
-    {
-      Serial.write(LoRaSerial.read());
-    }
+    // Mantem a configuracao persistida no E32. O significado dos comandos
+    // depende da revisao; nas revisoes com AT, POWER=3 significa 10 dBm.
+    Serial.println("[LoRa TX] Modo normal desde o setup; parametros gravados preservados.");
   }
-  exitLORAConfigMode();
 
   Serial.printf("Reset reason: %d\n", esp_reset_reason());
 
