@@ -1,4 +1,12 @@
-#include "FastIMU.h"
+#ifndef IMU_H
+#define IMU_H
+
+#include <Wire.h>
+#include <Arduino.h>
+
+// Referências para variáveis globais declaradas em Avionica.ino
+extern bool setupMPUFlag;
+// Assumindo que a estrutura PacketData e a variável 'allData' já foram definidas antes de incluir o imu.h
 
 #define RAD2DEG 57.2958
 #define DEG2RAD 0.0174533
@@ -6,14 +14,18 @@
 
 /* CONFIGURAÇÕES MPU */
 #define IMU_ADDRESS 0x68
-
 #define PERFORM_CALIBRATION true
 
-MPU6050 IMU;
+struct AccelData { float accelX, accelY, accelZ; };
+struct GyroData { float gyroX, gyroY, gyroZ; };
+struct calData {
+  float accelBias[3];
+  float gyroBias[3];
+};
 
-calData calib = { 0 };
-AccelData IMUAccel;
-GyroData IMUGyro;
+static AccelData IMUAccel;
+static GyroData IMUGyro;
+static calData calib = { 0 };
 
 float invSqrt(float x);
 
@@ -21,10 +33,7 @@ struct Quart {
   double q0, q1, q2, q3;
 
   Quart(double _q0, double _q1, double _q2, double _q3) {
-    q0 = _q0;
-    q1 = _q1;
-    q2 = _q2;
-    q3 = _q3;
+    q0 = _q0; q1 = _q1; q2 = _q2; q3 = _q3;
   }
 
   Quart operator +(const Quart& q) {
@@ -45,90 +54,110 @@ struct Quart {
   }
 };
 
-double time_elapsed = 0;
-bool is_initial_measurement = true;
+static double time_elapsed = 0;
+static Quart quat(1, 0, 0, 0);
 
-Quart quat(1, 0, 0, 0);
+// Função para tirar o MPU6050 do modo Sleep via I2C direto
+inline bool acordarMPU() {
+  Wire.beginTransmission(IMU_ADDRESS);
+  Wire.write(0x6B); // Registrador PWR_MGMT_1
+  Wire.write(0x00); // Acorda o chip
+  return (Wire.endTransmission() == 0);
+}
 
-void calibrate() {
+inline void calibrate() {
   Serial.println("Calibrando...");
-  Serial.println("Keep IMU level.");
-  delay(5000);
-  if (IMU.hasMagnetometer()) {
-    IMU.calibrateMag(&calib);
+  Serial.println("Mantenha a IMU nivelada e parada.");
+  delay(2000);
+
+  long sumAccX = 0, sumAccY = 0, sumAccZ = 0;
+  long sumGyroX = 0, sumGyroY = 0, sumGyroZ = 0;
+  const int samples = 500;
+
+  for (int i = 0; i < samples; i++) {
+    Wire.beginTransmission(IMU_ADDRESS);
+    Wire.write(0x3B);
+    Wire.endTransmission(false);
+    Wire.requestFrom((uint8_t)IMU_ADDRESS, (size_t)14);
+
+    sumAccX += (int16_t)(Wire.read() << 8 | Wire.read());
+    sumAccY += (int16_t)(Wire.read() << 8 | Wire.read());
+    sumAccZ += (int16_t)(Wire.read() << 8 | Wire.read());
+    Wire.read(); Wire.read(); // Ignora a leitura da temperatura
+    sumGyroX += (int16_t)(Wire.read() << 8 | Wire.read());
+    sumGyroY += (int16_t)(Wire.read() << 8 | Wire.read());
+    sumGyroZ += (int16_t)(Wire.read() << 8 | Wire.read());
+
+    delay(2);
   }
-  IMU.calibrateAccelGyro(&calib);
-  Serial.println("Calibration done!");
-  Serial.println("Accel biases X/Y/Z: ");
-  Serial.print(calib.accelBias[0]);
-  Serial.print(", ");
-  Serial.print(calib.accelBias[1]);
-  Serial.print(", ");
-  Serial.println(calib.accelBias[2]);
-  Serial.println("Gyro biases X/Y/Z: ");
-  Serial.print(calib.gyroBias[0]);
-  Serial.print(", ");
-  Serial.print(calib.gyroBias[1]);
-  Serial.print(", ");
-  Serial.println(calib.gyroBias[2]);
-  if (IMU.hasMagnetometer()) {
-    Serial.println("Mag biases X/Y/Z: ");
-    Serial.print(calib.magBias[0]);
-    Serial.print(", ");
-    Serial.print(calib.magBias[1]);
-    Serial.print(", ");
-    Serial.println(calib.magBias[2]);
-    Serial.println("Mag Scale X/Y/Z: ");
-    Serial.print(calib.magScale[0]);
-    Serial.print(", ");
-    Serial.print(calib.magScale[1]);
-    Serial.print(", ");
-    Serial.println(calib.magScale[2]);
-  }
-  IMU.init(calib, IMU_ADDRESS);
-  Serial.println("Calibrado!");
+
+  calib.accelBias[0] = (sumAccX / (float)samples) / 16384.0f;
+  calib.accelBias[1] = (sumAccY / (float)samples) / 16384.0f;
+  calib.accelBias[2] = ((sumAccZ / (float)samples) - 16384) / 16384.0f;
+
+  calib.gyroBias[0] = (sumGyroX / (float)samples) / 131.0f;
+  calib.gyroBias[1] = (sumGyroY / (float)samples) / 131.0f;
+  calib.gyroBias[2] = (sumGyroZ / (float)samples) / 131.0f;
+
+  Serial.println("Calibracao Concluida!");
 }
 
-void verifyMPU() {
-  int err = IMU.init(calib, IMU_ADDRESS);
-  setupMPUFlag = (err == 0);
+inline void verifyMPU() {
+  setupMPUFlag = acordarMPU();
 }
 
-void setupMPU() {
-  Serial.println("MPU6050 conectado!");
+inline void setupMPU() {
+  if (acordarMPU()) {
+    Serial.println("MPU6050 conectado e ativo!");
+  } else {
+    Serial.println("Erro ao conectar no MPU6050!");
+    return;
+  }
 
-  delay(500);
-  if(PERFORM_CALIBRATION) {
+  delay(100);
+  if (PERFORM_CALIBRATION) {
     calibrate();
   }
-  time_elapsed = 0;
+  time_elapsed = millis();
 }
 
-void readMPU() {
-  IMU.update();
-  IMU.getAccel(&IMUAccel);
-  IMU.getGyro(&IMUGyro);
+inline void readMPU() {
+  Wire.beginTransmission(IMU_ADDRESS);
+  Wire.write(0x3B); // Endereço inicial dos registradores de dados
+  Wire.endTransmission(false);
+  Wire.requestFrom((uint8_t)IMU_ADDRESS, (size_t)14);
 
-  // Por enquanto aceleracao no sistema inercial do sensor
+  int16_t rawAccX = (Wire.read() << 8) | Wire.read();
+  int16_t rawAccY = (Wire.read() << 8) | Wire.read();
+  int16_t rawAccZ = (Wire.read() << 8) | Wire.read();
+  Wire.read(); Wire.read(); // Ignora temperatura
+  int16_t rawGyrX = (Wire.read() << 8) | Wire.read();
+  int16_t rawGyrY = (Wire.read() << 8) | Wire.read();
+  int16_t rawGyrZ = (Wire.read() << 8) | Wire.read();
+
+  IMUAccel.accelX = (rawAccX / 16384.0f) - calib.accelBias[0];
+  IMUAccel.accelY = (rawAccY / 16384.0f) - calib.accelBias[1];
+  IMUAccel.accelZ = (rawAccZ / 16384.0f) - calib.accelBias[2];
+
+  IMUGyro.gyroX = (rawGyrX / 131.0f) - calib.gyroBias[0];
+  IMUGyro.gyroY = (rawGyrY / 131.0f) - calib.gyroBias[1];
+  IMUGyro.gyroZ = (rawGyrZ / 131.0f) - calib.gyroBias[2];
+
   allData.imuData.accelX = IMUAccel.accelX;
   allData.imuData.accelY = IMUAccel.accelY;
   allData.imuData.accelZ = IMUAccel.accelZ;
 
-  double accX = IMUAccel.accelX;
-  double accY = IMUAccel.accelY;
-  double accZ = IMUAccel.accelZ;
-
   double dt = (millis() - time_elapsed) / 1000.0;
-  time_elapsed = millis() * 1.0;
+  time_elapsed = millis();
 
   double gyroX = IMUGyro.gyroX * DEG2RAD;
   double gyroY = IMUGyro.gyroY * DEG2RAD;
   double gyroZ = IMUGyro.gyroZ * DEG2RAD;
 
   Quart Sw(0, gyroX, gyroY, gyroZ);
-  Quart dQ = (quat*0.5)*Sw;
+  Quart dQ = (quat * 0.5) * Sw;
 
-  quat = quat + (dQ*dt);
+  quat = quat + (dQ * dt);
   double norm = invSqrt(quat.q0*quat.q0 + quat.q1*quat.q1 + quat.q2*quat.q2 + quat.q3*quat.q3);
   quat = quat * norm;
 
@@ -138,13 +167,15 @@ void readMPU() {
   allData.imuData.quaternion_z = quat.q3;
 }
 
-float invSqrt(float x) {
-	float halfx = 0.5f * x;
-	float y = x;
-	long i = *(long*)&y;
-	i = 0x5f3759df - (i>>1);
-	y = *(float*)&i;
-	y = y * (1.5f - (halfx * y * y));
-	y = y * (1.5f - (halfx * y * y));
-	return y;
+inline float invSqrt(float x) {
+  float halfx = 0.5f * x;
+  float y = x;
+  long i = *(long*)&y;
+  i = 0x5f3759df - (i >> 1);
+  y = *(float*)&i;
+  y = y * (1.5f - (halfx * y * y));
+  y = y * (1.5f - (halfx * y * y));
+  return y;
 }
+
+#endif

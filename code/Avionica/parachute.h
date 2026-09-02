@@ -1,5 +1,6 @@
-#define SKIB1 13  
-#define SAFE_MARGIN_ALTITUDE_ERROR 17
+#define SKIB1 13
+#define SKIB2 12
+#define SAFE_MARGIN_ALTITUDE_ERROR 18
  
 // Em millisegundos 
 #define SKIB_TIME 3000 
@@ -13,7 +14,10 @@ double timeForStage1 = 0;
 bool alreadyDesactivatedBuzzer1 = false; 
  
 void setupSkibPins() { 
-  pinMode(SKIB1, OUTPUT);  
+  pinMode(SKIB1, OUTPUT);
+  pinMode(SKIB2, OUTPUT);
+  digitalWrite(SKIB1, LOW); 
+  digitalWrite(SKIB2, LOW); 
   Serial.println("Skib configurados!"); 
 } 
  

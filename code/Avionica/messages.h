@@ -52,21 +52,20 @@ String sdMessage()
       "Data: " + allData.gpsData.date + "\n" +
       "Temperatura: " + String(allData.bmpData.temperature, 2) + "\n" +
       "Pressão: " + String(allData.bmpData.pressure, 2) + "\n" +
-      "Altitude: " + String(allData.bmpData.altitude * 1000) + "\n" +
-      "Aceleração em X: " + String(allData.imuData.accelX * 100) + "\n" +
-      "Aceleração em Y: " + String(allData.imuData.accelY * 100) + "\n" +
-      "Aceleração em Z: " + String(allData.imuData.accelZ * 100) + "\n" +
-      "Quaternion W: " + String(allData.imuData.quaternion_w * 100) + "\n" +
-      "Quaternion X: " + String(allData.imuData.quaternion_x * 100) + "\n" +
-      "Quaternion Y: " + String(allData.imuData.quaternion_y * 100) + "\n" +
-      "Quaternion Z: " + String(allData.imuData.quaternion_z * 100) + "\n" +
+      "Altitude: " + String(allData.bmpData.altitude, 2) + "\n" +
+      "Aceleração em X: " + String(allData.imuData.accelX, 2) + "\n" +
+      "Aceleração em Y: " + String(allData.imuData.accelY, 2) + "\n" +
+      "Aceleração em Z: " + String(allData.imuData.accelZ, 2) + "\n" +
+      "Quaternion W: " + String(allData.imuData.quaternion_w, 2) + "\n" +
+      "Quaternion X: " + String(allData.imuData.quaternion_x, 2) + "\n" +
+      "Quaternion Y: " + String(allData.imuData.quaternion_y, 2) + "\n" +
+      "Quaternion Z: " + String(allData.imuData.quaternion_z, 2) + "\n" +
       "Paraquedas: " + String(allData.parachute) + "\n" +
-      "Latitude: " + String(allData.gpsData.latitude * 1000) + "\n" +
-      "Longitude: " + String(allData.gpsData.longitude * 1000) + "\n\n";
+      "Latitude: " + String(allData.gpsData.latitude, 6) + "\n" +
+      "Longitude: " + String(allData.gpsData.longitude, 6) + "\n\n";
 
   return sdMessage;
 }
-
 
 void saveMessages()
 {
