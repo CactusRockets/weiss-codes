@@ -1,70 +1,66 @@
+#pragma once
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
-#include <ArduinoJson.h>
 
 const char *ssid = "CARDOSO_2G";
 const char *password = "aonet123456789";
 
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
+bool wifiConnected = false;
+bool mdnsStarted = false;
+uint32_t lastWifiAttempt = 0;
+uint32_t lastMdnsAttempt = 0;
 
-void onWsEvent(
-    AsyncWebSocket *server,
-    AsyncWebSocketClient *client,
-    AwsEventType type,
-    void *arg,
-    uint8_t *data,
-    size_t len)
-{
-  if (type == WS_EVT_CONNECT)
-  {
-    Serial.println("Cliente conectado");
-  }
-  else if (type == WS_EVT_DISCONNECT)
-  {
-    Serial.println("Cliente desconectado");
-  }
-  else if (type == WS_EVT_DATA)
-  {
-    Serial.print("Dados recebidos: ");
-    Serial.write(data, len);
-    Serial.println();
-  }
+void onWsEvent(AsyncWebSocket *, AsyncWebSocketClient *, AwsEventType type,
+               void *, uint8_t *, size_t) {
+  if (type == WS_EVT_CONNECT) Serial.println("Cliente WebSocket conectado.");
+  if (type == WS_EVT_DISCONNECT) Serial.println("Cliente WebSocket desconectado.");
 }
 
-void setupServer()
-{
+void setupServer() {
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(1000);
-    Serial.println("Conectando ao WiFi...");
-  }
-  Serial.println("Conectado ao WiFi");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  Serial.flush();
-
-  Serial.println("Iniciando mDNS...");
-  Serial.flush();
-  if (!MDNS.begin("esp32"))
-  {
-    // Falha no mDNS nao impede o servidor de funcionar pelo IP,
-    // por isso nao abortamos mais o setup aqui.
-    Serial.println("Erro ao configurar mDNS (seguindo mesmo assim)");
-  }
-  else
-  {
-    Serial.println("mDNS configurado como esp32.local");
-  }
-  Serial.flush();
-
+  lastWifiAttempt = millis();
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "Solo: telemetria V2, WebSocket /ws");
+  });
+  server.begin();
+  Serial.println("Servidor HTTP iniciado; recepcao LoRa independe do WiFi.");
+}
 
-  // Adicione uma rota básica para verificar a conexão HTTP
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(200, "text/plain", "Servidor ESP32 funcionando"); });
+void maintainWiFi() {
+  const uint32_t now = millis();
+  if (WiFi.status() == WL_CONNECTED) {
+    if (!wifiConnected) {
+      wifiConnected = true;
+      Serial.print("WiFi conectado. IP: ");
+      Serial.println(WiFi.localIP());
+      lastMdnsAttempt = now - 10000;
+    }
+    if (!mdnsStarted && static_cast<uint32_t>(now - lastMdnsAttempt) >= 10000) {
+      lastMdnsAttempt = now;
+      mdnsStarted = MDNS.begin("esp32");
+      if (mdnsStarted) {
+        MDNS.addService("http", "tcp", 80);
+        Serial.println("mDNS configurado: esp32.local");
+      }
+    }
+  } else {
+    if (wifiConnected) {
+      wifiConnected = false;
+      if (mdnsStarted) MDNS.end();
+      mdnsStarted = false;
+      Serial.println("WiFi desconectado; LoRa continua recebendo.");
+    }
+    if (static_cast<uint32_t>(now - lastWifiAttempt) >= 15000) {
+      lastWifiAttempt = now;
+      WiFi.reconnect();
+    }
+  }
 }
