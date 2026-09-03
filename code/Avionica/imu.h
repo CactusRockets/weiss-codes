@@ -23,6 +23,7 @@ struct calData {
   float gyroBias[3];
 };
 
+static bool imuSampleValid = false;
 static AccelData IMUAccel;
 static GyroData IMUGyro;
 static calData calib = { 0 };
@@ -73,12 +74,18 @@ inline void calibrate() {
   long sumAccX = 0, sumAccY = 0, sumAccZ = 0;
   long sumGyroX = 0, sumGyroY = 0, sumGyroZ = 0;
   const int samples = 500;
+  int validSamples = 0;
 
   for (int i = 0; i < samples; i++) {
     Wire.beginTransmission(IMU_ADDRESS);
     Wire.write(0x3B);
-    Wire.endTransmission(false);
-    Wire.requestFrom((uint8_t)IMU_ADDRESS, (size_t)14);
+    if (Wire.endTransmission(false) != 0 ||
+        Wire.requestFrom((uint8_t)IMU_ADDRESS, (size_t)14) != 14) {
+      setupMPUFlag = false;
+      Serial.println("Calibracao abortada: leitura I2C incompleta.");
+      return;
+    }
+    ++validSamples;
 
     sumAccX += (int16_t)(Wire.read() << 8 | Wire.read());
     sumAccY += (int16_t)(Wire.read() << 8 | Wire.read());
@@ -90,6 +97,8 @@ inline void calibrate() {
 
     delay(2);
   }
+
+  if (validSamples != samples) return;
 
   calib.accelBias[0] = (sumAccX / (float)samples) / 16384.0f;
   calib.accelBias[1] = (sumAccY / (float)samples) / 16384.0f;
@@ -122,10 +131,15 @@ inline void setupMPU() {
 }
 
 inline void readMPU() {
+  imuSampleValid = false;
   Wire.beginTransmission(IMU_ADDRESS);
   Wire.write(0x3B); // Endereço inicial dos registradores de dados
-  Wire.endTransmission(false);
-  Wire.requestFrom((uint8_t)IMU_ADDRESS, (size_t)14);
+  if (Wire.endTransmission(false) != 0 ||
+      Wire.requestFrom((uint8_t)IMU_ADDRESS, (size_t)14) != 14) {
+    setupMPUFlag = false;
+    time_elapsed = millis();
+    return;
+  }
 
   int16_t rawAccX = (Wire.read() << 8) | Wire.read();
   int16_t rawAccY = (Wire.read() << 8) | Wire.read();
@@ -165,17 +179,11 @@ inline void readMPU() {
   allData.imuData.quaternion_x = quat.q1;
   allData.imuData.quaternion_y = quat.q2;
   allData.imuData.quaternion_z = quat.q3;
+  imuSampleValid = true;
 }
 
 inline float invSqrt(float x) {
-  float halfx = 0.5f * x;
-  float y = x;
-  long i = *(long*)&y;
-  i = 0x5f3759df - (i >> 1);
-  y = *(float*)&i;
-  y = y * (1.5f - (halfx * y * y));
-  y = y * (1.5f - (halfx * y * y));
-  return y;
+  return (isfinite(x) && x > 0.0f) ? 1.0f / sqrtf(x) : NAN;
 }
 
 #endif

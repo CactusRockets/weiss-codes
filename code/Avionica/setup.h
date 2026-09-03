@@ -59,6 +59,9 @@ void setupComponents() {
 }
 
 void getSensorsMeasures() {
+  bmpSampleValid = false;
+  imuSampleValid = false;
+  kalmanSampleValid = false;
   // Medições BMP390
   if (ENABLE_BMP) {
     readBMP();
@@ -74,8 +77,10 @@ void getSensorsMeasures() {
     }
   }
 
-  if (ENABLE_BMP && ENABLE_MPU && setupMPUFlag){
+  if (ENABLE_BMP && ENABLE_MPU && bmpSampleValid && imuSampleValid) {
     kalman_filter();
+  } else {
+    invalidateKalman();
   }
 
   //Medições GPS
@@ -85,11 +90,6 @@ void getSensorsMeasures() {
 }
 
 void resetStructs() {
-  allData = {
-    { 0,0 },        // time, parachute
-    { 0,0,0 },      // temperature, pressure, altitude
-    { 0,0,0 },      // accX, accY, accZ
-    { "", "", 0,0 }         // latitude, longitude
-  };
+  allData = PacketData{};
   soloData = { 0 }; // openParachute
 }

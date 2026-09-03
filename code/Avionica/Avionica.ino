@@ -133,7 +133,7 @@ bool setupMPUFlag = false;
 bool setupBMPFlag = false;
 bool setupGPSFlag = false;
 
-int package_counter = 0;
+uint32_t package_counter = 0;
 
 float initial_altitude;
 
@@ -147,7 +147,6 @@ float initial_altitude;
 #include "gps.h"
 #include "parachute.h"
 #include "setup.h"
-#include "debug.h"
 #include "messages.h"
 
 void setupComponents();
@@ -186,7 +185,7 @@ void setup()
   telemetry_message.reserve(1500);
 
   Serial.begin(115200);
-  Serial.println("[FW] AVIONICA-E32-DIAG-1");
+  Serial.println("[FW] AVIONICA-TELEMETRY-V2");
   Serial.println("-------------------------------------");
   Serial.println("------ Inicializando Sistema --------");
   Serial.println("-------------------------------------");

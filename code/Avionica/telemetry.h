@@ -5,8 +5,8 @@
 // Pinos da Serial 2 do ESP32
 #define RX2_PIN 16
 #define TX2_PIN 17
-#define M0 32
-#define M1 33
+#define M0 22
+#define M1 21
 
 #define LORA_STRING_METHOD 1
 #define LORA_STRUCT_METHOD 2
@@ -52,6 +52,7 @@ void receiveString()
 
 void transmit()
 {
+  if (telemetry_message.isEmpty()) return;
   if (LORA_WAY == LORA_STRING_METHOD)
   {
     Serial.println("Transmitindo a mensagem de telemetria");

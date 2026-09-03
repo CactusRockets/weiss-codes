@@ -1,46 +1,70 @@
+#pragma once
+#include "telemetry_packet.h"
+#include "telemetry_math.h"
 
-String fixNumberSize(int num, int width, bool enableSignal = false)
-{
-  int numPositive = (num >= 0 ? num : -num);
-  String formattedString = String(numPositive);
+TelemetryV2::Packet flightTelemetry;
+constexpr uint32_t GPS_MAX_AGE_MS = 10000;
 
-  while (formattedString.length() < width)
-  {
-    formattedString = "0" + formattedString;
+void updateFlightTelemetry() {
+  // Executa a cada leitura de sensores; os maximos sobrevivem entre transmissoes.
+  TelemetryV2::Packet current;
+  current.sequence = package_counter;
+  current.maximumAltitude = flightTelemetry.maximumAltitude;
+  current.maximumVelocity = flightTelemetry.maximumVelocity;
+  current.maximumAcceleration = flightTelemetry.maximumAcceleration;
+
+  if (bmpSampleValid) {
+    current.altitude = allData.bmpData.altitude;
+    FlightMath::updateMaximum(highestAltitude, current.maximumAltitude);
+    FlightMath::updateMaximum(current.altitude, current.maximumAltitude);
   }
-
-  if (!enableSignal)
-    return formattedString;
-
-  if (num < 0)
-  {
-    formattedString = "-" + formattedString;
+  if (imuSampleValid) {
+    current.quaternion_w = allData.imuData.quaternion_w;
+    current.quaternion_x = allData.imuData.quaternion_x;
+    current.quaternion_y = allData.imuData.quaternion_y;
+    current.quaternion_z = allData.imuData.quaternion_z;
+    FlightMath::Vector a;
+    if (FlightMath::linearAcceleration(IMUAccel.accelX, IMUAccel.accelY, IMUAccel.accelZ,
+          current.quaternion_w, current.quaternion_x, current.quaternion_y, current.quaternion_z, a)) {
+      current.accelerationX = a.x;
+      current.accelerationY = a.y;
+      current.accelerationZ = kalmanSampleValid ? verticalAcceleration : a.z;
+      current.acceleration = FlightMath::magnitude(current.accelerationX, current.accelerationY,
+                                                    current.accelerationZ);
+      FlightMath::updateMaximum(current.acceleration, current.maximumAcceleration);
+    }
   }
-  else
-  {
-    formattedString = "+" + formattedString;
+  if (kalmanSampleValid) current.velocityZ = verticalVelocity; // K.x(1), m/s
+  if (ENABLE_GPS && gps.location.isValid() && gps.location.age() <= GPS_MAX_AGE_MS) {
+    current.latitude = allData.gpsData.latitude;
+    current.longitude = allData.gpsData.longitude;
   }
+  if (ENABLE_GPS && gps.speed.isValid() && gps.speed.age() <= GPS_MAX_AGE_MS &&
+      gps.course.isValid() && gps.course.age() <= GPS_MAX_AGE_MS) {
+    const FlightMath::Vector v = FlightMath::gpsVelocity(gps.speed.mps(), gps.course.deg());
+    current.velocityX = v.x;
+    current.velocityY = v.y;
+  }
+  current.velocity = FlightMath::magnitude(current.velocityX, current.velocityY, current.velocityZ);
+  FlightMath::updateMaximum(current.velocity, current.maximumVelocity);
 
-  return formattedString;
+  // Flags historicas de acionamento; nao representam continuidade eletrica dos skibs.
+  current.skib1 = flightTelemetry.skib1 || parachute1Activated || allData.parachute > 0;
+  current.skib2 = flightTelemetry.skib2 || allData.parachute > 1;
+  if (ENABLE_SKIBS) {
+    current.skib1 = current.skib1 || digitalRead(SKIB1) == HIGH;
+    current.skib2 = current.skib2 || digitalRead(SKIB2) == HIGH;
+  }
+  flightTelemetry = current;
 }
 
-String telemetryMessage()
-{
-  String result =
-      fixNumberSize(package_counter, 5) + 
-      fixNumberSize((int)(allData.bmpData.altitude * 1000), 6, true) + 
-      fixNumberSize((int)(allData.imuData.accelZ * 100), 4, true) + 
-      fixNumberSize((int)(allData.imuData.quaternion_w * 100), 3, true) + 
-      fixNumberSize((int)(allData.imuData.quaternion_x * 100), 3, true) + 
-      fixNumberSize((int)(allData.imuData.quaternion_y * 100), 3, true) + 
-      fixNumberSize((int)(allData.imuData.quaternion_z * 100), 3, true) + 
-      String(allData.parachute) + 
-      fixNumberSize((int)(allData.gpsData.latitude * 10000), 6) + 
-      fixNumberSize((int)(allData.gpsData.longitude * 10000), 6);
-
-  Serial.println(result);
-
-  return result;
+String telemetryMessage() {
+  char frame[TelemetryV2::CAPACITY];
+  if (!TelemetryV2::encode(flightTelemetry, frame, sizeof(frame))) {
+    Serial.println("[LoRa TX] Pacote V2 invalido ou sem espaco; envio cancelado.");
+    return String();
+  }
+  return String(frame);
 }
 
 String sdMessage()
@@ -67,9 +91,9 @@ String sdMessage()
   return sdMessage;
 }
 
-void saveMessages()
-{
+void saveMessages() {
+  updateFlightTelemetry();
   telemetry_message = telemetryMessage();
   sd_message = sdMessage();
-  package_counter++;
+  ++package_counter;
 }

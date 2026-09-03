@@ -15,6 +15,7 @@ Adafruit_BMP3XX bmp;
 
 extern bool setupBMPFlag; // Declaração externa para evitar conflito de redefinição
 
+bool bmpSampleValid = false;
 float highestAltitude = 0;
 float altitudeAtual = 0;
 float initialAltitude = 0;
@@ -77,11 +78,16 @@ void setupBMP() {
 }
 
 void readBMP() {
+  bmpSampleValid = false;
   if (!setupBMPFlag) return;
 
-  updateBMP();
-
-  float nova = bmp.readAltitude(SEA_LOCAL_PRESSURE) - initialAltitude;
+  if (!bmp.performReading()) {
+    Serial.println("BMP: leitura falhou; telemetria marcada como indisponivel.");
+    return;
+  }
+  // Mesma formula de readAltitude(), usando apenas a pressao desta leitura validada.
+  const float atmospheric = bmp.pressure / 100.0f;
+  float nova = 44330.0f * (1.0f - powf(atmospheric / SEA_LOCAL_PRESSURE, 0.1903f)) - initialAltitude;
 
   // Guarda de sanidade: uma leitura corrompida (I2C com ruido, pressao
   // zerada) contaminaria highestAltitude de forma permanente e poderia
@@ -99,6 +105,7 @@ void readBMP() {
   allData.bmpData.pressure = bmp.pressure;
   allData.bmpData.altitude = nova;
 
+  bmpSampleValid = true;
   altitudeAtual = nova;
 
   if(altitudeAtual > highestAltitude) {
